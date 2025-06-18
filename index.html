@@ -137,6 +137,7 @@
 
                 try {
                     // Create the pin
+                    console.log("Creating pin");
                     var entity = viewer.entities.add({
                         position: Cesium.Cartesian3.fromDegrees(lon, lat),
                         point: {
@@ -160,6 +161,7 @@
                     });
 
                     // Create the poly line
+                    console.log("Creating line");
                     var positions = Cesium.Cartesian3.fromDegreesArray([lon, lat,
                         lon, lat]);
                     var positionHistory = new PositionHistory(60, positions, polyLine);
