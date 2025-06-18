@@ -213,7 +213,9 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const data = await JSON.parse(response);
+                console.log(response.text)
+
+                const data = await response.json();
                 
                 // Update request count
                 requestCount++;
