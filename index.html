@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CesiumJS App with HTTP Requests</title>
+
+    <!-- CesiumJS CDN -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.130/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.130/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+    <style>
+        html, body, #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #statusPanel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(42, 42, 42, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            font-family: sans-serif;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .status-success {
+            color: #4CAF50;
+        }
+
+        .status-error {
+            color: #f44336;
+        }
+
+        .status-loading {
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer"></div>
+    
+    <div id="statusPanel">
+        <div>Status: <span id="requestStatus">Initializing...</span></div>
+        <div>Last Request: <span id="lastRequest">Never</span></div>
+        <div>Request Count: <span id="requestCount">0</span></div>
+    </div>
+
+    <script>
+
+        class PositionHistory {
+            constructor(limit = 60, pos, polyLine) {
+                this.limit = limit;
+                this.items = pos;
+                this.polyLine = polyLine;
+            }
+
+            add(item) {
+                this.items.push(item);
+                if (this.items.length > this.limit) {
+                    this.items.shift();
+                }
+            }
+
+            getAll() {
+                return this.items;
+            }
+
+            getMostRecent() {
+                return this.items[this.items.length - 1];
+            }
+        }
+
+        class PinEntity {
+            constructor(entity, time) {
+                this.time = time;
+                this.entity = entity;
+            }
+
+            isNewTime(time) {
+                return time != this.time;
+            }
+
+            update(pos) {
+                this.entity.position = pos;
+            }
+        }
+
+        const entityDict = new Map();
+        const positionHistoryDict = new Map();
+
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzMzdhMjIxMS02MDdmLTRhNTMtYmRmZC1jMGU4NmFiZjdiNGQiLCJpZCI6MjIwMzI5LCJpYXQiOjE3NDkzMDEyNjh9.v-fHsJR4ncvFK-ETUid10vofS9OnLAxm0uAC_yj4wmk';
+
+        // Initialize the Cesium Viewer in the HTML element with the `cesiumContainer` ID.
+        const viewer = new Cesium.Viewer('cesiumContainer', {
+            terrain: Cesium.Terrain.fromWorldTerrain(),
+            timeline: false
+            //requestRenderMode: false
+        });
+
+        // Starting in Llanbedr airfield at the given longitude, latitude, and height.
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(-4.124534, 52.810137, 5000),
+            orientation: {
+                heading: Cesium.Math.toRadians(0.0),
+                pitch: Cesium.Math.toRadians(-90.0),
+            }
+        });
+
+        console.log("Set up done");
+
+        // Allow C# to add pins at runtime
+        function addPin(lon, lat, labelText, color, receivedTime) {
+            console.log("Adding pin");
+
+            var pos = Cesium.Cartesian3.fromDegrees(lon, lat);
+            if (entityDict.has(labelText)) {
+
+                if (entityDict.get(labelText).isNewTime(receivedTime)) {
+
+                    entityDict.get(labelText).entity.position = pos;
+                    entityDict.get(labelText).time = receivedTime;
+
+                    positionHistoryDict.get(labelText).add(pos);
+                    console.log("Pin updated");
+
+                }
+
+            } else {
+
+                try {
+                    // Create the pin
+                    var entity = viewer.entities.add({
+                        position: Cesium.Cartesian3.fromDegrees(lon, lat),
+                        point: {
+                            pixelSize: 10,
+                            color: Cesium.Color.fromCssColorString(color),
+                            outlineColor: Cesium.Color.WHITE,
+                            outlineWidth: 2,
+                            eyeOffset: new Cesium.Cartesian3(0.0, 0.0, -10.0),
+                            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                            disableDepthTestDistance: 1.2742018 * 10 ** 7 // Diameter of Earth
+                        },
+                        label: {
+                            text: labelText,
+                            eyeOffset: new Cesium.Cartesian3(0.0, 0.0, -10.0),
+                            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                            disableDepthTestDistance: 1.2742018 * 10 ** 7 // Diameter of Earth
+                            //pixelOffset: new Cesium.Cartesian2(0, -20)
+                        }
+                    });
+
+                    // Create the poly line
+                    var positions = Cesium.Cartesian3.fromDegreesArray([lon, lat,
+                        lon, lat]);
+                    var positionHistory = new PositionHistory(60, positions, polyLine);
+
+                    var polyLine = viewer.entities.add({
+                        polyline: {
+                            positions: new Cesium.CallbackProperty(() => positionHistory.items, false),
+                            width: 3,
+                            material: Cesium.Color.RED,
+                            clampToGround: true
+                            //eyeOffset: new Cesium.Cartesian3(0.0, 0.0, -10.0),
+                            //verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                            //heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                            //disableDepthTestDistance: 1.2742018 * 10 ** 7 // Diameter of Earth
+                        },
+                    });
+                    entityDict.set(labelText, new PinEntity(entity, receivedTime));
+                    positionHistoryDict.set(labelText, positionHistory);
+                    console.log("Pin added");
+                } catch (exceptionVar) {
+                    console.log(exceptionVar);
+                }
+            }
+        }
+
+        // HTTP request configuration
+            const API_URL = 'http://urgently-stunning-ape.ngrok-free.app/lastLocations'; // Replace with your actual API endpoint
+        let requestCount = 0;
+
+        // DOM elements for status display
+        const statusElement = document.getElementById('requestStatus');
+        const lastRequestElement = document.getElementById('lastRequest');
+        const requestCountElement = document.getElementById('requestCount');
+
+        // Function to make HTTP GET request
+        async function makeHttpRequest() {
+            try {
+                // Update status to loading
+                statusElement.textContent = 'Loading...';
+                statusElement.className = 'status-loading';
+                
+                // Make the HTTP request
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Update request count
+                requestCount++;
+                requestCountElement.textContent = requestCount;
+                
+                // Update status to success
+                statusElement.textContent = 'Success';
+                statusElement.className = 'status-success';
+                
+                // Update last request time
+                lastRequestElement.textContent = new Date().toLocaleTimeString();
+                
+                // Process the data (example: log to console)
+                console.log('API Response:', data);
+                
+                // Example: You could add entities to the map based on the response data
+                 processApiData(data);
+                
+            } catch (error) {
+                console.error('HTTP request failed:', error);
+                
+                // Update status to error
+                statusElement.textContent = `Error: ${error.message}`;
+                statusElement.className = 'status-error';
+                
+                // Still update the last request time
+                lastRequestElement.textContent = new Date().toLocaleTimeString();
+            }
+        }
+
+        // Function to process API data and update the map (example)
+        function processApiData(data) {
+            // Example: If your API returns location data, you could add entities
+            // This is just a placeholder - customize based on your actual API response
+            
+            for (let i = 0; i < data.deviceLocations.length; i++) {
+                addPin(data.deviceLocations[i].Longitude, data.deviceLocations[i].Latitude, data.deviceLocations[i].Id, Cesium.Color.RED, data.deviceLocations[i].ReceivedTime)
+            }
+        }
+
+        // Start making HTTP requests every 30 seconds
+        const REQUEST_INTERVAL = 30000; // 30 seconds in milliseconds
+
+        // Make the first request immediately
+        makeHttpRequest();
+
+        // Set up interval for subsequent requests
+        const requestInterval = setInterval(makeHttpRequest, REQUEST_INTERVAL);
+
+        // Optional: Clean up interval when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            clearInterval(requestInterval);
+        });
+
+        // Optional: Handle visibility change to pause/resume requests when tab is not active
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(requestInterval);
+                console.log('Requests paused - tab not visible');
+            } else {
+                // Resume requests when tab becomes visible again
+                makeHttpRequest(); // Make immediate request
+                setInterval(makeHttpRequest, REQUEST_INTERVAL);
+                console.log('Requests resumed - tab visible');
+            }
+        });
+    </script>
+</body>
+</html>
