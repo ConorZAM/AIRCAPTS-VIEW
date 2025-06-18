@@ -213,7 +213,7 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                console.log(response.text)
+                console.log(response.text());
 
                 const data = await response.json();
                 
