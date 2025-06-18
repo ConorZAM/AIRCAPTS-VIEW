@@ -214,22 +214,10 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                // DEBUG: Log response headers
-                console.log('Response headers:');
-                for (let [key, value] of response.headers.entries()) {
-                    console.log(`${key}: ${value}`);
-                }
-
+                
                 // DEBUG: Get the raw text first to see what we're actually receiving
                 const rawText = await response.text();
-                console.log('Raw response text:', rawText);
-                console.log('Raw response length:', rawText.length);
-                console.log('First 100 characters:', rawText.substring(0, 100));
-
-                // Check if response is empty
-                if (!rawText || rawText.trim() === '') {
-                    throw new Error('Response is empty');
-                }
+                
 
                 //console.log(response.text());
                 const data = JSON.parse(rawText);
@@ -269,7 +257,7 @@
             // This is just a placeholder - customize based on your actual API response
             
             for (let i = 0; i < data.deviceLocations.length; i++) {
-                addPin(data.deviceLocations[i].Longitude, data.deviceLocations[i].Latitude, data.deviceLocations[i].Id, Cesium.Color.RED, data.deviceLocations[i].ReceivedTime)
+                addPin(data.deviceLocations[i].Longitude, data.deviceLocations[i].Latitude, data.deviceLocations[i].Id, "red", data.deviceLocations[i].ReceivedTime)
             }
         }
 
