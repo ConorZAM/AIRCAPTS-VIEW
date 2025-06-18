@@ -56,10 +56,9 @@
     <script>
 
         class PositionHistory {
-            constructor(limit = 60, pos, polyLine) {
+            constructor(limit = 60, pos) {
                 this.limit = limit;
                 this.items = pos;
-                this.polyLine = polyLine;
             }
 
             add(item) {
@@ -164,7 +163,7 @@
                     console.log("Creating line");
                     var positions = Cesium.Cartesian3.fromDegreesArray([lon, lat,
                         lon, lat]);
-                    var positionHistory = new PositionHistory(60, positions, polyLine);
+                    var positionHistory = new PositionHistory(60, positions);
 
                     var polyLine = viewer.entities.add({
                         polyline: {
