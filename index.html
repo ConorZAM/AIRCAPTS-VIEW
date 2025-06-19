@@ -226,6 +226,12 @@
                 // Update request count
                 requestCount++;
                 requestCountElement.textContent = requestCount;
+
+                if (data.deviceLocations === null) {
+                    statusElement.textContent = 'No Data Yet';
+                    statusElement.className = 'status-noData';
+                    return;
+                }
                 
                 // Update status to success
                 statusElement.textContent = 'Success';
