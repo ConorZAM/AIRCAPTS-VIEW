@@ -186,6 +186,17 @@
             }
         }
 
+
+        const socket = new WebSocket("ws://urgently-stunning-ape.ngrok-free.app/subscribe");
+
+        socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+    // console.log(data);
+    processApiData(data);
+    // devices[data.Id] = data;
+    
+    // updateTable();
+});
         // HTTP request configuration
             const API_URL = 'https://urgently-stunning-ape.ngrok-free.app/lastLocations'; // Replace with your actual API endpoint
         let requestCount = 0;
@@ -195,77 +206,78 @@
         const lastRequestElement = document.getElementById('lastRequest');
         const requestCountElement = document.getElementById('requestCount');
 
-        // Function to make HTTP GET request
-        async function makeHttpRequest() {
-            try {
-                // Update status to loading
-                statusElement.textContent = 'Loading...';
-                statusElement.className = 'status-loading';
+        // // Function to make HTTP GET request
+        // async function makeHttpRequest() {
+        //     try {
+        //         // Update status to loading
+        //         statusElement.textContent = 'Loading...';
+        //         statusElement.className = 'status-loading';
                 
-                // Make the HTTP request
-                const response = await fetch(API_URL, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'pls'
-                    }
-                });
+        //         // Make the HTTP request
+        //         const response = await fetch(API_URL, {
+        //             method: 'GET',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //                 'ngrok-skip-browser-warning': 'pls'
+        //             }
+        //         });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
 
                 
-                // DEBUG: Get the raw text first to see what we're actually receiving
-                const rawText = await response.text();
+        //         // DEBUG: Get the raw text first to see what we're actually receiving
+        //         const rawText = await response.text();
                 
 
-                //console.log(response.text());
-                const data = JSON.parse(rawText);
+        //         //console.log(response.text());
+        //         const data = JSON.parse(rawText);
                 
-                // Update request count
-                requestCount++;
-                requestCountElement.textContent = requestCount;
+        //         // Update request count
+        //         requestCount++;
+        //         requestCountElement.textContent = requestCount;
 
-                if (data.deviceLocations === null) {
-                    statusElement.textContent = 'No Data Yet';
-                    statusElement.className = 'status-noData';
-                    return;
-                }
+        //         if (data.deviceLocations === null) {
+        //             statusElement.textContent = 'No Data Yet';
+        //             statusElement.className = 'status-noData';
+        //             return;
+        //         }
                 
-                // Update status to success
-                statusElement.textContent = 'Success';
-                statusElement.className = 'status-success';
+        //         // Update status to success
+        //         statusElement.textContent = 'Success';
+        //         statusElement.className = 'status-success';
                 
-                // Update last request time
-                lastRequestElement.textContent = new Date().toLocaleTimeString();
+        //         // Update last request time
+        //         lastRequestElement.textContent = new Date().toLocaleTimeString();
                 
-                // Process the data (example: log to console)
-                console.log('API Response:', data);
+        //         // Process the data (example: log to console)
+        //         console.log('API Response:', data);
                 
-                // Example: You could add entities to the map based on the response data
-                 processApiData(data);
+        //         // Example: You could add entities to the map based on the response data
+        //          processApiData(data);
                 
-            } catch (error) {
-                console.error('HTTP request failed:', error);
+        //     } catch (error) {
+        //         console.error('HTTP request failed:', error);
                 
-                // Update status to error
-                statusElement.textContent = `Error: ${error.message}`;
-                statusElement.className = 'status-error';
+        //         // Update status to error
+        //         statusElement.textContent = `Error: ${error.message}`;
+        //         statusElement.className = 'status-error';
                 
-                // Still update the last request time
-                lastRequestElement.textContent = new Date().toLocaleTimeString();
-            }
+        //         // Still update the last request time
+        //         lastRequestElement.textContent = new Date().toLocaleTimeString();
+        //     }
         }
 
         // Function to process API data and update the map (example)
         function processApiData(data) {
             // Example: If your API returns location data, you could add entities
             // This is just a placeholder - customize based on your actual API response
+                addPin(data.Longitude, data.Latitude, data.Id, "red", data.ReceivedTime);
             
-            for (let i = 0; i < data.deviceLocations.length; i++) {
-                addPin(data.deviceLocations[i].longitude, data.deviceLocations[i].latitude, data.deviceLocations[i].id, "red", data.deviceLocations[i].receivedTime)
-            }
+            // for (let i = 0; i < data.deviceLocations.length; i++) {
+            //     addPin(data.deviceLocations[i].longitude, data.deviceLocations[i].latitude, data.deviceLocations[i].id, "red", data.deviceLocations[i].receivedTime)
+            // }
         }
 
         // Start making HTTP requests every 30 seconds
