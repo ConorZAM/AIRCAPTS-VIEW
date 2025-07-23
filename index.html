@@ -187,7 +187,7 @@
         }
 
 
-        const socket = new WebSocket("ws://urgently-stunning-ape.ngrok-free.app/subscribe");
+        const socket = new WebSocket("wss://urgently-stunning-ape.ngrok-free.app/subscribe");
 
         socket.addEventListener("message", (event) => {
             const data = JSON.parse(event.data);
